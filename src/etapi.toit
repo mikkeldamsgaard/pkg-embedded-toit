@@ -1,9 +1,9 @@
 import monitor
 
-TYPE_BASE_ ::= 100
-TYPE_QUIT_ ::= TYPE_BASE
-TYPE_STATUS_ ::= TYPE_QUIT + 1
-TYPE_STREAM_START_ ::= TYPE_STATUS + 1
+TYPE_QUIT_ ::= 100
+TYPE_STATUS_ ::= 101
+
+TYPE_STREAM_START_ ::= 200
 
 
 interface StreamReceiver:
@@ -15,29 +15,35 @@ class Stream implements SystemMessageHandler_:
   receiver_ /StreamReceiver
   
   constructor .stream_id_ .receiver_:
-     set_system_message_handler_ TYPE_STREAM_START + stream_id_ this
+     set_system_message_handler_ TYPE_STREAM_START_ + stream_id_ this
   
   send message/ByteArray:
-    process_send_ 0 TYPE_STREAM_START_ + stream_id_ message
+    try:
+      process_send_ 0 TYPE_STREAM_START_ + stream_id_ message
+      return null
+    finally: |is_exception e|
+      if is_exception: 
+        print "Send failed: $e.value"
+        return e.value
 
   on_message type gid pid message -> none:
     assert: type == TYPE_STREAM_START_ + stream_id_
     receiver_.on_message stream_id_ message
 
 
-class EmbeddedApi implements SystemMessageHandler_:
+class  EmbeddedApi implements SystemMessageHandler_:
   latch_ ::= monitor.Latch
 
   construtor:
-     set_system_message_handler_ TYPE_QUIT this
-     set_system_message_handler_ TYPE_STATUS this
+     set_system_message_handler_ TYPE_QUIT_ this
+     set_system_message_handler_ TYPE_STATUS_ this
      5.repeat:
-        set_system_message_handler_ TYPE_STREAM_START + it this
+        set_system_message_handler_ TYPE_STREAM_START_ + it this
 
   on_message type gid pid message -> none:
-    assert: type == TYPE_QUIT || type == TYPE_STATUS
+    assert: type == TYPE_QUIT_ or type == TYPE_STATUS_
 
-    if type == TYPE_QUIT:
+    if type == TYPE_QUIT_:
       latch_.set null
       return
 
