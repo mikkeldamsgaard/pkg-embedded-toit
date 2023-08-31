@@ -28,6 +28,7 @@ class Stream implements SystemMessageHandler_:
 
   on_message type gid pid message -> none:
     assert: type == TYPE_STREAM_START_ + stream_id_
+    if type != TYPE_STREAM_START_ + stream_id_: throw "What!"
     receiver_.on_message stream_id_ message
 
 
